@@ -1,65 +1,14 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
-	conf "keycloak-app/config"
-	"log"
-	"net/http"
-
-	oidc "github.com/coreos/go-oidc"
-	"golang.org/x/oauth2"
+	cfg "keycloak-app/config"
+	"keycloak-app/services/api"
 )
 
 func main() {
-	conf.LoadConfig("./.env")
-	ctx := context.Background()
-	provider, err := oidc.NewProvider(ctx, conf.KEYCLOAK_ISSUER)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Carrega variáveis de ambiente
+	cfg.LoadConfig("./.env")
 
-	config := oauth2.Config{
-		ClientID:     conf.CLIENT_ID,
-		ClientSecret: conf.CLIENT_SECRET,
-		Endpoint:     provider.Endpoint(),
-		RedirectURL:  "http://localhost" + conf.PORT + "/auth/callback",
-		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "roles"},
-	}
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, config.AuthCodeURL(conf.STATE), http.StatusFound)
-	})
-
-	http.HandleFunc("/auth/callback", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Query().Get("state") != conf.STATE {
-			http.Error(w, "Error: State does not match", http.StatusBadRequest)
-			return
-		}
-
-		oauth2Token, err := config.Exchange(ctx, r.URL.Query().Get("code"))
-		if err != nil {
-			http.Error(w, "Error: It is not possible to exchange the token.", http.StatusInternalServerError)
-			return
-		}
-
-		idToken, ok := oauth2Token.Extra("id_token").(string)
-		if !ok {
-			http.Error(w, "Error: It's not possible to retrieve the ID Token.", http.StatusInternalServerError)
-			return
-		}
-
-		res := struct {
-			OAuth2Token *oauth2.Token
-			IDToken     string
-		}{
-			OAuth2Token: oauth2Token,
-			IDToken:     idToken,
-		}
-
-		data, _ := json.MarshalIndent(res, "", "  ")
-		w.Write(data)
-	})
-
-	log.Fatal(http.ListenAndServe(conf.PORT, nil))
+	// Inicializa o servidor com Gin
+	api.StartServer()
 }
