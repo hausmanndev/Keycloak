@@ -12,9 +12,9 @@ import (
 )
 
 func main() {
-	conf.LoadConfig("./cmd/.env")
+	conf.LoadConfig("./.env")
 	ctx := context.Background()
-	provider, err := oidc.NewProvider(ctx, "http://localhost:8080/auth/realms/demo")
+	provider, err := oidc.NewProvider(ctx, conf.KEYCLOAK_ISSUER)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,7 +23,7 @@ func main() {
 		ClientID:     conf.CLIENT_ID,
 		ClientSecret: conf.CLIENT_SECRET,
 		Endpoint:     provider.Endpoint(),
-		RedirectURL:  "http://localhost:8081/auth/callback",
+		RedirectURL:  "http://localhost" + conf.PORT + "/auth/callback",
 		Scopes:       []string{oidc.ScopeOpenID, "profile", "email", "roles"},
 	}
 
@@ -61,5 +61,5 @@ func main() {
 		w.Write(data)
 	})
 
-	log.Fatal(http.ListenAndServe(":8081", nil))
+	log.Fatal(http.ListenAndServe(conf.PORT, nil))
 }
