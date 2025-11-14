@@ -34,10 +34,8 @@ func Oauth2Config() *oauth2.Config {
 
 func SetupHandlers(r *gin.Engine) {
 	// Setup your route handlers here
-	keycloak := r.Group("/keycloak")
-
-	keycloak.GET("/", redirectToLogin())
-	keycloak.GET("/auth/callback", authCallback())
+	r.GET("/", redirectToLogin())
+	r.GET("/auth/callback", authCallback())
 }
 
 // redirectToLogin redireciona o usuário para a tela de autenticação do Keycloak
