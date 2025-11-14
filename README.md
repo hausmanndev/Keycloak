@@ -3,23 +3,23 @@
 Este repositório mostra como integrar uma aplicação Go com **Keycloak** utilizando **OpenID Connect (OIDC)** e **OAuth2**. Inclui um `docker-compose.yml` para subir o Keycloak (com PostgreSQL) e instruções passo a passo para configurar realm, client e usuário.
 <br>
 
-## Estrutura do repositório
-keycloak-app/<br>
-│<br>
-├── cmd/<br>
-│ ├── .env.sample<br>
-│ └── main.go # Exemplo de app Go usando OIDC (fornecido)<br>
-│<br>
-├── config/<br>
-│ └── config.go # Loader de variáveis de ambiente (ex.: .env)<br>
-│<br>
-├── docker-compose.yml # Compose para Keycloak + Postgres<br>
-│<br>
-├── .env # Variáveis de ambiente da aplicação Go<br>
-│<br>
-└── README.md # Este arquivo<br>
-<br>
-<br>
+## Iniciar o Keycloak com Docker
+Rode o comando abaixo em seu terminal e espere o Keycloak subir:
+```bash
+docker run -p 127.0.0.1:8080:8080 -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin quay.io/keycloak/keycloak:26.4.5 start-dev
+```
+
+## Configuração do ambiente
+Crie um arquivo .env dentro da pasta cmd/ com base no exemplo fornecido:
+```bash
+cp cmd/.env.sample cmd/.env
+```
+
+## App
+```bash
+cd cmd/
+go run main.go
+```
 
 ## Configuração passo a passo no Keycloak
 
@@ -30,56 +30,58 @@ Abaixo está o passo a passo para configurar um **Realm**, **Client** e **Usuár
 ---
 
 ### 1. Acessar o Admin Console
-1. Abra `http://localhost:8080` no navegador.
-2. Clique em **Administration Console** e faça login com o usuário admin (ex.: `admin` / `admin` conforme `docker-compose.yml`).
+1. Abra [http://localhost:8080](http://localhost:8080) no navegador.
+2. Faça login com o usuário e senha admin (ex.: `admin` / `admin`).
 
 ---
 
 ### 2. Criar um Realm
-1. No canto superior esquerdo, clique no seletor de realm (por padrão `Master`) → **Add realm**.
-2. **Name:** `demo`  
+1. No canto superior esquerdo, clique em **Manage realms** (por padrão `Master`) → **Create realm**.
+2. **Realm name:** `demo`  
 3. Clique em **Create**.
 
 ---
 
 ### 3. Criar um Client (aplicação)
-1. No menu lateral do realm `demo`, clique em **Clients** → **Create**.
+1. No menu lateral do realm `demo`, clique em **Clients** → **Create client**.
 2. Preencha:
-   - **Client ID:** `go-client`
-   - **Client Protocol:** `openid-connect`
+   - **Client ID:** `go-client` → **Next**
+   - **Authentication flow:** ✅`Standard flow` | ✅`Direct access grants`
+   - **Client authentication** `On`
+   - **Authorization** `On`
    - **Root URL:** `http://localhost:8081`
+   - **Valid redirect URIs** `http://localhost:8081/*`
 3. Clique em **Save**.
-
-#### Ajustes do Client (após salvar)
-1. Em **Settings**:
-   - **Access Type:** `confidential`
-   - **Standard Flow Enabled:** `ON` (habilita Authorization Code Flow)
-   - **Direct Access Grants Enabled:** `ON` (opcional; habilita Resource Owner Password Credentials)
-   - **Service Accounts Enabled:** `OFF` (ou `ON` se precisar usar client credentials)
-   - **Valid Redirect URIs:** `http://localhost:8081/auth/callback`
-   - **Web Origins:** `http://localhost:8081` (ou `*` apenas para desenvolvimento local)
-   - **Root URL:** `http://localhost:8081` (se não preenchido antes)
-2. Clique em **Save**.
 
 #### Obter Client Secret
 1. Vá até a aba **Credentials** do client.
-2. Copie o **Secret** (Client Secret) e coloque no seu `.env` como `CLIENT_SECRET`.
+2. Copie o **Client secret** e coloque no seu `.env` como `CLIENT_SECRET`.
 
 ---
 
-### 4. Incluir roles no token (opcional — quando precisar enviar roles)
-Se sua aplicação precisa que roles apareçam no ID/Access Token, siga um destes caminhos:
+### 4. Criar um User
+1. No menu lateral do realm `demo`, clique em **Users** → **Create new user**.
+2. Preencha:
+   - **Email verified** `On`
+   - **Username:** go-user
+   - **Email:** foobar@gmail.com
+   - **First name:** Foo
+   - **Last name:** Bar
+3. Clique em **Create**.
 
-**Opção A — Usar mappers do client**
-1. Dentro do client `go-client`, vá em **Mappers** → **Create**.
-2. Exemplo de mapper para incluir **realm roles**:
-   - **Name:** `realm-roles-mapper`
-   - **Mapper Type:** `User Realm Role` (mapeia papéis do realm)
-   - **Token Claim Name:** `realm_access.roles` (ou `roles`, conforme sua preferência)
-   - Marque: **Add to ID token** e **Add to access token**
-   - Salve.
+#### Definir password
+1. Vá até a aba **Credentials** do user.
+2. Preencha:
+   - **Password:** ex: 123456
+   - **Password confirmation:** 123456
+   - **Temporary** `Off`
+3. Clique em **Save**.
 
-**Opção B — Usar Client Scopes**  
-1. Em **Client Scopes** (menu lateral do realm), crie/edite um scope que inclua os mappers desejados e depois associe esse scope ao client em **Client → Client Scopes**.
+---
 
-> Observação: o Keycloak também pode incluir roles automatica
+### Saiba mais
+1. Documentação: [keycloak.org](https://www.keycloak.org/documentation)
+2. API: [keycloak API](https://www.keycloak.org/docs-api/latest/rest-api/index.html)
+3. OAuth 2.0 Authorization Framework: [OAuth2](https://auth0.com/docs/authenticate/protocols/oauth)
+4. OpenID Connect Protocol: [OpenID Connect](https://auth0.com/docs/authenticate/protocols/openid-connect-protocol)
+5. Mini curso de Keycloak: [YouTube - Marco Seabra](https://www.youtube.com/watch?v=ZiN3NLBro5U&list=PL-XEb3GK7JUrzMDzRAiRG-AV8iP73FF8T&index=2)
